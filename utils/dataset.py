@@ -24,13 +24,28 @@ class SimpleDataset(Dataset): # SimpleDataset 클래스를 정의합니다. 이 
 
         if self.transform: # transform이 주어졌다면 
             image = self.transform(image) # 이미지에 transform을 적용합니다.
-
         image = torch.tensor(image, dtype=torch.float32).permute(2, 0, 1) / 255.0 # 이미지를 텐서로 변환합니다. 이미지의 shape은 (H, W, C)에서 (C, H, W)로 변경하고, 255로 나누어 정규화합니다. 왜냐하면 픽셀 값은 0부터 255 사이의 값을 가지기 때문입니다. dtype은 torch.float32로 설정합니다. float16은 너무 작은 값을 표현할 수 없기 때문에 사용하지 않습니다.
-        label = torch.tensor(label, dtype=torch.long) # 레이블을 텐서로 변환합니다. dtype은 torch.long으로 설정합니다. long은 정수형 데이터 타입 중 하나입니다. 
+        label = torch.tensor(label, dtype=torch.float32) # 레이블을 텐서로 변환합니다. dtype은 torch.long으로 설정합니다. long은 정수형 데이터 타입 중 하나입니다. 
 
         return image, label # 이미지와 레이블을 반환합니다.
+
+def collate_fn(batch):
+    images, labels = list(zip(*batch))
+    images = torch.stack(images)
+
+    # 라벨을 패딩하여 텐서로 변환
+    max_size = max(label.shape[0] for label in labels)
+
+    padded_labels = []
+    for label in labels:
+        pad = torch.zeros(max_size - label.shape[0], label.shape[1])
+        padded_labels.append(torch.cat([label, pad], dim=0))
+
+    labels = torch.stack(padded_labels)
+
+    return images, labels
     
 def get_data_loader(data_dir, batch_size=16, shuffle=True): # get_data_loader 함수를 정의합니다. 이 함수는 DataLoader를 생성하여 반환합니다. DataLoader는 데이터셋을 미니배치로 나누어 읽어오는 클래스입니다. 이 함수가 호출되는 주기는 학습 루프에서 데이터를 읽어오는 주기와 일치합니다. 예를 들어, 에폭마다 호출됩니다.
     dataset = SimpleDataset(data_dir) # SimpleDataset을 생성합니다.
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle) # DataLoader를 생성합니다. DataLoader는 데이터셋을 미니배치로 나누어 읽어오는 클래스입니다. 인자로는 데이터셋과 미니배치 크기, 셔플 여부를 받습니다.
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn) # DataLoader를 생성합니다. DataLoader는 데이터셋을 미니배치로 나누어 읽어오는 클래스입니다. 인자로는 데이터셋과 미니배치 크기, 셔플 여부를 받습니다.
     return loader # DataLoader를 반환합니다.

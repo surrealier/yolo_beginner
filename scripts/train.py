@@ -6,7 +6,9 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from models.simple_yolo import SimpleYOLOv8
 from utils.dataset import get_data_loader
+from utils import loss
 import argparse
+import torchvision.transforms as transforms
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, default='data/train/', help='data directory')
@@ -18,7 +20,7 @@ args = parser.parse_args()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = SimpleYOLOv8(num_classes=5).to(device)
 optimizer = optim.Adam(model.parameters(), lr=0.001)
-criterion = nn.CrossEntropyLoss()
+criterion = loss.FocalLoss()
 
 train_loader = get_data_loader("sample_data/train/", batch_size=4)
 val_loader = get_data_loader("sample_data/val/", batch_size=4)
@@ -28,10 +30,10 @@ num_epochs = 10
 for epoch in range(num_epochs):
     model.train()
     total_loss = 0
-    
     for images, labels in train_loader:
         images = images.to(device)
         labels = labels.to(device)
+        import pdb; pdb.set_trace()
 
         optimizer.zero_grad()
         outputs = model(images)
